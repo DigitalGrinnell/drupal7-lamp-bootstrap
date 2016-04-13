@@ -1,4 +1,6 @@
-# vagrant-lamp-bootstrap
+# drupal7-lamp-bootstrap
+
+## Forked and modified from: vagrant-lamp-bootstrap
 
 A super-simple Vagrantfile / bootstrap.sh to setup a LAMP stack inside Vagrant 100% automatically.
 
@@ -8,9 +10,9 @@ This is a reduced-to-the-max Vagrant setup file for a quick development stack. I
 
 * setup a Ubuntu 14.04 LTS "Trustry Thar" 64bit box
 
-* make the box accessable by the host at IP `192.168.33.22`
+* make the box accessable by the host at IP `192.168.22.22`
 
-* sync the current folder with `/var/www/html` inside the box
+* sync the current folder with `/var/www/drupal7` inside the box
 
 * automatically perform all the commands in bootstrap.sh directly after setting up the box for the first time
 
@@ -18,7 +20,7 @@ The bootstrap.sh will:
 
 * update, upgrade
 
-* create a folder inside /var/www/html
+* create a folder inside /var/www/drupal7
 
 * install apache 2.4, php 5.5, MySQL, PHPMyAdmin, git and Composer
 

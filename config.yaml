@@ -1,0 +1,13 @@
+---
+configs:
+    use: 'office'
+    office:
+        private_ip: '192.168.42.42'
+        hostname: 'drupal7vm.dev'
+        site: 'rootstalk'
+        aliases: 'drupal7vm.dev  rootstalk.drupal7vm.dev'
+    home:
+        private_ip: '192.168.42.42'
+        hostname: 'drupal7vm.dev'
+        site: 'rootstalk'
+        aliases: 'drupal7vm.dev  rootstalk.drupal7vm.dev'
