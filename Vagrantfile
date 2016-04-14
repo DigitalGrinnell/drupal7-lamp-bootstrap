@@ -5,15 +5,16 @@
 require 'yaml'
 current_dir = File.dirname(File.expand_path(__FILE__))
 configs     = YAML.load_file("#{current_dir}/config.yaml")
-vc          = configs['configs'][configs['configs']['use']]
+vc          = configs['config']
 
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  $cpus     = ENV.fetch("DRUPAL7_VAGRANT_CPUS", "2")
-  $memory   = ENV.fetch("DRUPAL7_VAGRANT_MEMORY", "3000")
+  $cpus   = ENV.fetch("DRUPAL7_VAGRANT_CPUS", "2")
+  $memory = ENV.fetch("DRUPAL7_VAGRANT_MEMORY", "3000")
+  $share  = ENV.fetch("DRUPAL7_VAGRANT_SHARE", "/var/drupal7-lamp-bootstrap")
 
   # Configure vagrant hostupdater to work
   # Create a private network, which allows host-only access to the machine using a specific IP.
@@ -35,21 +36,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Share an additional folder to the guest VM. The first argument is the path on the host to the actual folder.
   # The second argument is the path on the guest to mount the folder.
-  config.vm.synced_folder "./", "/var/www/drupal7/lamp-bootstrap"
+  config.vm.synced_folder "./", $share
 
 
   # Define the bootstrap file: A (shell) script that runs after first setup of your box (= provisioning)
-  config.vm.provision "shell" do |s|
-    s.path = "bootstrap.sh"
-    s.args = vc['hostname']
-    s.privileged = true
-  end
-
-  # config.vm.provision :shell, path: "bootstrap.sh", :privileged => true, :args => vc['hostname'] vc['site']
+  config.vm.provision :shell, path: "bootstrap.sh", :privileged => true, :args => $share
 
   # If there is a ./scripts/custom.sh defined...run it now
-  #if File.exist?("./scripts/custom.sh") then
-  #  config.vm.provision :shell, path: "./scripts/custom.sh", :privileged => true
-  #end
+  if File.exist?("./scripts/custom.sh") then
+    config.vm.provision :shell, path: "./scripts/custom.sh", :privileged => true, :args => $share
+  end
 
 end

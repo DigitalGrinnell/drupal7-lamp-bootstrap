@@ -1,22 +1,27 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-hostname=$1
-site=$2
+echo "This is bootstrap.sh"
+echo "-----------------------------------------------------------------"
 
-hostname="drupal7vm.dev"
-site="rootstalk"
+# Read configuration variables using technique documented at https://gist.github.com/pkuczynski/8665367
+share=$1
+cd $share
+# include parse_yaml function
+. parse_yaml.sh
+# read yaml file
+eval $(parse_yaml config.yaml)
 
+hostname=$config_hostname
+site=$config_site
+PASSWORD=$config_password
+PROJECTFOLDER=$config_drupal_dir
 
 # Use single quotes instead of double quotes to make it work with special-character passwords
-PASSWORD='12345678'
-PROJECTFOLDER='drupal7'
+#PASSWORD='12345678'
+#PROJECTFOLDER='drupal7'
 
-root="/var/www/${PROJECTFOLDER}"
-
-# create project folder
-if [ ! -d "${root}" ]; then
-  mkdir "${root}"
-fi
+# specify the Drupal document root
+droot="/var/www/${PROJECTFOLDER}"
 
 # update / upgrade
 apt-get update
@@ -44,7 +49,7 @@ apt-get -y install phpmyadmin
 # setup hosts file
 VHOST=$(cat <<EOF
 <VirtualHost *:80>
-    DocumentRoot "${root}"
+    DocumentRoot "${droot}"
     ServerName ${hostname}
     ServerAlias ${hostname} *.${hostname}
     <Directory "${root}">
@@ -81,31 +86,43 @@ mv composer.phar /usr/local/bin/composer
 echo "Install drush"
 apt-get -y install drush
 
-#fetch and install drupal 7 using drush
-echo "Install Drupal 7 using drush"
-drush -y dl drupal --drupal-project-rename=drupal
-cp -fr drupal/* /var/www/${PROJECTFOLDER}
-cd /var/www/${PROJECTFOLDER}
-chown -R vagrant:www-data .
+# create the Drupal root folder if it does not already exist
+if [ ! -d "${droot}" ]; then
+  mkdir "${droot}"
+fi
 
-# create the Drupal /default site and any defined $SITE target
+#fetch and install drupal 7 using drush IF it does NOT already exist
+echo "Install Drupal 7 using drush"
+if [ ! -f ${droot}/LICENSE.txt ]; then
+  cd /tmp
+  drush -y dl drupal --drupal-project-rename=drupal
+  cp -fr drupal/* ${droot}
+  chown -R vagrant:www-data ${droot}
+fi
+
+# create the Drupal /default site and any defined $site target
 echo "Create the Drupal /default and /${site} sites"
+cd ${droot}
 drush -y site-install standard --db-url="mysql://root:${PASSWORD}@localhost/default" --site-name=${hostname} --account-mail="digital@grinnell.edu" --account-pass="${PASSWORD}"
 drush -y site-install standard --db-url="mysql://root:${PASSWORD}@localhost/${site}" --sites-subdir=${site} --site-name=${site} --account-pass="${PASSWORD}"
 
 # set /default and /site directory permissions
-chmod 774 "${root}/sites/default/files"
-chmod 774 "${root}/sites/${site}/files"
+chmod 774 "${droot}/sites/default/files"
+chmod 774 "${droot}/sites/${site}/files"
+
+# set the site_name (title) variable
+cd ${droot}/sites/${site}
+drush -u 1 vset site_name ${config_site_name}
 
 # fetch .htaccess
 echo "Fetch and apply .htaccess"
-if [ ! -f "${root}/.htaccess" ]; then
-  cp "${root}/lamp-bootstrap/resources/.htaccess" "${root}/"
+if [ ! -f "${droot}/.htaccess" ]; then
+  cp "${share}/resources/.htaccess" "${droot}/"
 fi
 
 # add site.hostname to the ../sites/sites.php file
 echo "Adding ${site}.${hostname} to ../sites/sites.php"
-cd "${root}/sites"
+cd "${droot}/sites"
 if [ ! -f sites.php ]; then
   cp example.sites.php sites.php
   chmod 444 sites.php
@@ -115,6 +132,58 @@ if [ ! -f sites.php ]; then
   chmod 400 example.sites.php
 fi
 
+# Apply a custom theme!  Via Git (value begins with "http") or from Drupal?
+theme=$config_theme
+if [[ ${theme} == "http"* ]]
+then
+  git=1
+  drupal=0
+elif [[ ${theme} != "" ]]
+then
+  drupal=1
+  git=0
+else
+  echo "No custom theme specified."
+  exit
+fi
+
+if [ ! -d "${droot}"/sites/${site}/themes ]; then
+  mkdir "${droot}"/sites/${site}/themes || exit
+fi
+
+# Apply a custom theme using Git if one is defined
+# (if the value starts with "http").
+if [[ ${git} -eq 1 ]]
+then
+  echo "Cloning custom theme using Git from ${theme}"
+  cd "${droot}"/sites/${site}/themes || exit
+  git clone ${theme}
+  cd */ || exit
+  git config core.filemode false
+  info=`ls *.info`
+  echo "The theme's .info file is: ${info}"
+  filename=$(basename "${info}")
+  dtheme="${filename%.*}"
+  cd "${droot}"/sites/${site} || exit
+  echo "The custom theme '${dtheme}' will be enabled and set as the default for site ${site}"
+  drush -y -u 1 en ${dtheme}
+  drush -u 1 vset theme_default ${dtheme}
+fi
+
+# Apply a custom Drupal.org theme if one is defined
+# (if the value does not begin with "http").
+if [[ ${drupal} -eq 1 ]]
+then
+  echo "Downloading and enabling Drupal theme '${theme}"
+  cd "${droot}"/sites/${site}/themes || exit
+  drush -y -u 1 dl ${theme}
+  cd "${droot}"/sites/${site} || exit
+  echo "The custom theme '${theme}' will be enabled and set as the default for site ${site}"
+  drush -y -u 1 en ${theme}
+  drush -u 1 vset theme_default ${theme}
+fi
+
+cd ${droot}
 chown -R vagrant:www-data .
 
 

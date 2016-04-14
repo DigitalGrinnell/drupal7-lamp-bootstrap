@@ -1,13 +1,22 @@
+# This is config.yaml.  Use this file to configure your VM.
+
+# Keep the structure of this file very simple, just key/value pairs please.
+# All pairs should be subordinate to 'config' only and use 2-space indentation.
+
 ---
-configs:
-    use: 'office'
-    office:
-        private_ip: '192.168.42.42'
-        hostname: 'drupal7vm.dev'
-        site: 'rootstalk'
-        aliases: 'drupal7vm.dev  rootstalk.drupal7vm.dev'
-    home:
-        private_ip: '192.168.42.42'
-        hostname: 'drupal7vm.dev'
-        site: 'rootstalk'
-        aliases: 'drupal7vm.dev  rootstalk.drupal7vm.dev'
+config:
+  drupal_dir: drupal7
+  private_ip: 192.168.42.42
+  hostname: drupal7vm.dev
+  # Your site directory name must be all lowercase or drush will complain!
+  site: rootstalk
+  # Your site name (title) can be mixed case
+  site_name: ROOTSTALK
+  # Provide address aliases to be written into the sites.php file
+  aliases: drupal7vm.dev rootstalk.drupal7vm.dev
+  # Wrap your password in single quotes if it includes special characters
+  password: 12345678
+  # Define a default Drupal theme.
+  # If theme: includes 'http' the value is assumed to be in the named git repo,
+  # otherwise it will be downloaded from Drupal.org using drush.
+  theme: bootstrap
